@@ -1,0 +1,36 @@
+---
+
+### Install helm and kubectl in the jump server ###
+
+- name: Install helm, kubectl for jumphost
+  delegate_to: localhost
+  import_tasks: install_dependencies.yaml
+
+### setup the rke2 cluster first node ###
+
+- name: setup rke2 cluster for first node
+  delegate_to: rke2_rancher-master01
+  import_tasks: setup_rke2.yaml
+
+
+### add second node to the rke2 cluster ###
+
+- name: add second master node to the rke2 cluster
+  delegate_to: rke2_rancher-master02
+  import_tasks: add_masternode.yaml
+
+
+### add third node to the rke2 cluster ###
+
+- name: add thrird master node to the rke2 cluster
+  delegate_to: rke2_rancher-master03
+  import_tasks: add_masternode.yaml
+
+
+### deploy rancher server using helm package manager ###
+
+- name: deploy rancher server in the rke2 cluster
+  delegate_to: localhost
+  import_tasks: deploy_rancher.yaml
+
+

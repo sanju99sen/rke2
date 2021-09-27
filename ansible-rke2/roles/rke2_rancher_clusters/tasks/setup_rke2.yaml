@@ -67,19 +67,6 @@
   delay: 10
   changed_when: false
 
-#- name: copy the rke2 config file
-#  copy:
-#     src: "{{ rke2_config_src }}"
-#     dest: "{{ rke2_config_dest }}"
-#     mode: '0755'
-#  changed_when: false
-
-#- name: reload and restart rke2 systemd daemon
-#  systemd:
-#      name: rke2-server.service
-#      state: restarted
-#      daemon_reload: yes
-#  changed_when: false
 
 - name: Check that kubeconfig exists in the cluster node 
   stat:
@@ -100,6 +87,16 @@
      dest: ~/.kube/config
      flat: yes                   ### fetch the file only, otherwise it would copy the servername and path
      mode: '0644'
+
+ ## above code is tested already ###
+
+- name: update the loopback ip with load balancer/master server ip
+  delegate_to: localhost
+  lineinfile:
+          path: /root/.kube/config
+          search_string: 'server: https://127.0.0.1:6443'
+          line: "server: https://{{ LB-IP }}:6443"
+
 
 
 
