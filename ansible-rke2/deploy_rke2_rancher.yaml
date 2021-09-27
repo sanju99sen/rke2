@@ -1,0 +1,8 @@
+---
+- name: playbook to depoly rancher rke2 and install rancher server
+  hosts: localhost
+  become: yes
+  become_user: root
+  gather_facts: no
+  roles:
+     - rke2_rancher_clusters

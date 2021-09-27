@@ -1,0 +1,82 @@
+---
+
+- name: check if rke2 binary exists
+  stat: 
+    path: /usr/local/bin/rke2 
+  register: rke2_stat
+
+- name: Get rke2 version
+  command: /usr/local/bin/rke2 --version
+  register: rke2_existing_version
+  when: rke2_stat.stat.exists
+
+- name: Download and Install rke2 tarball and kubectl
+  shell: 
+    cmd: curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL=v1.20 sh -
+  when: not rke2_stat.stat.exists or rke2_version not in rke2_existing_version.stdout
+
+- name: ensure /etc/rancher/rke2 directory exists
+  file:
+          path: /etc/rancher/rke2
+          state: directory
+          mode: '0755'
+  run_once: True
+
+- name: copy the rke2 config file
+  copy:
+          src: "./config.yaml"
+          dest: "{{ rke2_config_dest }}"
+          mode: '0755'
+  changed_when: false        
+
+  #- name: reload rke2 systemd daemon
+  # systemd:
+  #        name: rke2-server.service
+  #        state: reloaded
+  #changed_when: false
+
+
+- name: start rke2 systemd daemon
+  systemd:
+       name: rke2-server.service
+       state: started
+       enabled: yes
+  changed_when: false
+
+
+#- name: copy the rke2 config file
+#  copy:
+#     src: "{{ rke2_config_src }}"
+#     dest: "{{ rke2_config_dest }}"
+#     mode: '0755'
+#  changed_when: false
+
+#- name: reload and restart rke2 systemd daemon
+#  systemd:
+#      name: rke2-server.service
+#      state: restarted
+#      daemon_reload: yes
+#  changed_when: false
+
+- name: Check that kubeconfig exists in the cluster node 
+  stat:
+    path: "{{ rke2_cluster_kube_config }}"
+  register: kubeconfig_result
+
+- name: Ensure $HOME/.kube exists in jumphost
+  delegate_to: localhost
+  file:
+    path: ~/.kube
+    state: directory
+    mode: '0755'
+  run_once: True
+
+- name: fetch kubeconfig from cluster node to jumphost
+  fetch:
+     src: "{{ rke2_cluster_kube_config }}"
+     dest: ~/.kube/config
+     flat: yes                   ### fetch the file only, otherwise it would copy the servername and path
+     mode: '0644'
+
+
+

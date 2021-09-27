@@ -1,0 +1,6 @@
+token: my_rke2_shared_token
+server: https://rancher-master01.tcs.local:9345
+tls-san:
+        - rancher.tcs.local
+        - rancher-rke2.tcs.local
+        - 192.168.29.17

@@ -1,0 +1,72 @@
+---
+
+- name: check if rke2 binary exists
+  stat:
+    path: /usr/local/bin/rke2
+  register: rke2_stat
+
+- name: Get rke2 version
+  command: /usr/local/bin/rke2 --version
+  register: rke2_existing_version
+  when: rke2_stat.stat.exists
+
+- name: Download and Install rke2 tarball and kubectl
+  shell:
+    cmd: "curl -sfL https://get.rke2.io | INSTALL_RKE2_CHANNEL={{ INSTALL_RKE2_CHANNEL }} sh -"
+  when: not rke2_stat.stat.exists or rke2_version not in rke2_existing_version.stdout
+
+- name: ensure /etc/rancher/rke2 directory exists
+  file:
+          path: /etc/rancher/rke2
+          state: directory
+          mode: '0755'
+  run_once: True
+
+- name: copy the rke2 config file
+  copy:
+          src: "./additional-master-config.yaml"
+          dest: "{{ rke2_config_dest }}"
+          mode: '0755'
+  changed_when: false
+
+
+- name: start rke2 systemd daemon
+  systemd:
+       name: rke2-server.service
+       state: started
+       enabled: yes
+  changed_when: false
+
+- name: Wait for k8s apiserver
+  wait_for:
+    host: "127.0.0.1"
+    port: "6443"
+    state: present
+    timeout: 300
+
+- name: Wait for kubelet process to be present on host
+  command: >-
+    ps -C kubelet -F -ww --no-headers
+  register: kubelet_check
+  until: kubelet_check.rc == 0
+  retries: 20
+  delay: 10
+  changed_when: false
+
+- name: Extract the hostname-override parameter from the kubelet process
+  set_fact:
+       kubelet_hostname_override_parameter: "{{ kubelet_check.stdout | regex_search('\\s--hostname-override=((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9]))\\s','\\1') }}"
+
+- name: Wait for node to show Ready status
+  command: >-
+    /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml
+    --server https://127.0.0.1:6443 get no {{ kubelet_hostname_override_parameter[0] }}
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+  register: status_result
+  until: status_result.stdout.find("True") != -1
+  retries: 20
+  delay: 10
+  changed_when: false
+
+
+

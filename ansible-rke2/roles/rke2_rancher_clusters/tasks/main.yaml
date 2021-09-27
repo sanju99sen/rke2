@@ -1,0 +1,14 @@
+---
+
+- name: setup rke2 cluster for first node
+  delegate_to: rke2_rancher-master01
+  import_tasks: setup_rke2.yaml
+
+- name: add second master node to the rke2 cluster
+  delegate_to: rke2_rancher-master02
+  import_tasks: add_masternode.yaml
+
+- name: add thrird master node to the rke2 cluster
+  delegate_to: rke2_rancher-master03
+  import_tasks: add_masternode.yaml
+

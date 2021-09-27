@@ -1,0 +1,3 @@
+rke2_rancher-master01 ansible_host=192.168.29.17	ansible_ssh_user=root
+rke2_rancher-master02 ansible_host=192.168.29.26        ansible_ssh_user=root
+rke2_rancher-master03 ansible_host=192.168.29.65	ansible_ssh_user=root
